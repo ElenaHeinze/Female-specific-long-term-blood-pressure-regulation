@@ -1,5 +1,5 @@
 '''
-From Koo et al. in "In Silico Modeling of Shear-Stress-Induced Nitric Oxide Production in Endothelial Cells through Systems Biology"
+From Koo, A., Nordsletten, D., Umeton, R., Yankama, B., Ayyadurai, S., García-Cardeña, G., & Dewey, C. F. (2013). In Silico Modeling of Shear-Stress-Induced Nitric Oxide Production in Endothelial Cells through Systems Biology. Biophysical Journal, 104(10), 2295–2306.​
 
 In response to increased fluid shear stress, endothelial cells exhibit a transient increase in cytosolic free calcium (see Fig. 2 A). The influx of calcium
 is due to mechanisms such as activation of stress-sensitive calcium channels
@@ -84,7 +84,7 @@ def model(t, y:list):
 
     return [dCa_exdt, dCa_sdt, dCa_cdt, dCa_Bdt, ds5dt, dip3dt, ds7dt, ds8dt, ds9dt, ds10dt, ds11dt, dTimeTdt, ds13dt, dtShearStressdt]
 
-# initial condition taken from SBML model report (May 5, 2016)
+# initial conditions taken from SBML model report (May 5, 2016)
 # species (14 species in total)
 # [Ca_ex, Ca_s, Ca_c, Ca_B, s5, IP3, s7, s8, s9, s10, s11, TimeT, s13, ShearStress]
 y0 = [np.float64(1500000), np.float64(2830000), np.float64(117.2), np.float64(3870), 0,0,0,0,0,0,0,0,0,0]
@@ -97,38 +97,75 @@ L = len(t)
 # solve ODEs
 # mode run
 df = pd.read_csv("./Female-specific-long-term-blood-pressure-regulation/COPASI/calcium_eNOS/Koo.txt", delimiter="\t")
-
-# mode debug
-#df = pd.read_csv("Female-specific-long-term-blood-pressure-regulation/COPASI/calcium_eNOS/Koo.txt", delimiter="\t")
-#global_q = pd.read_csv("Female-specific-long-term-blood-pressure-regulation/COPASI/calcium_eNOS/global_quantities.txt", delimiter="\t")
-t_eval = df['# Time'].to_numpy() #(np.logspace(-3, 3, num=489) - 0.001) np.linspace(0, sec, 1000)
+t_eval = df['# Time'].to_numpy() # np.linspace(0, sec, 1000)
 print("t_eval:", t_eval)
 sol = solve_ivp(model,t, y0, t_eval=t_eval, method='LSODA', rtol=1e-6,atol=1e-12)
 
 # Plot the time course of the solution
 print("length of sol.t:", len(sol.t))
-plt.plot(sol.t, sol.y[0, :], 'r-', label='Ca_ex')
+#plt.plot(sol.t, sol.y[0, :], 'r-', label='Ca_ex')
 plt.plot(sol.t, sol.y[1, :], 'b-', label='Ca_s')
+plt.plot(t_eval, df['Ca_s'], 'silver', linestyle='dashdot', label='Ca_s Koo et al.')
 plt.plot(sol.t, sol.y[2, :], 'g-', label='Ca_c')
+plt.plot(t_eval, df['Ca_c'], 'silver', linestyle='dashdot', label='Ca_c Koo et al.')
 plt.plot(sol.t, sol.y[3, :], 'c-', label='Ca_B')
-plt.plot(sol.t, sol.y[4, :], 'k-', label='s5')
+plt.plot(t_eval, df['Ca_B'], 'silver', linestyle='dashdot', label='Ca_B Koo et al.')
+#plt.plot(sol.t, sol.y[4, :], 'k-', label='s5')
 plt.plot(sol.t, sol.y[5, :], 'y-', label='IP3')
-plt.plot(sol.t, sol.y[6, :], 'k-', label='s7')
+plt.plot(t_eval, df['IP3'], 'silver', linestyle='dashdot', label='IP3 Koo et al.')
+#plt.plot(sol.t, sol.y[6, :], 'k-', label='s7')
 plt.plot(sol.t, sol.y[7, :], 'mediumpurple', label='s8')
+plt.plot(t_eval, df['s8'], 'silver', linestyle='dashdot', label='s8 Koo et al.')
 plt.plot(sol.t, sol.y[8, :], 'orange', label='s9')
+plt.plot(t_eval, df['s9'], 'silver', linestyle='dashdot', label='s9 Koo et al.')
 plt.plot(sol.t, sol.y[9, :], 'teal', label='s10')
-plt.plot(sol.t, sol.y[10, :], 'r', label='s11')
-plt.plot(sol.t, sol.y[12, :], 'springgreen', label='s13')
-
-# plt.plot(t_eval, df['Ca_s'], 'b.', label='Ca_s')
-# plt.plot(t_eval, df['Ca_c'], 'g.', label='Ca_c')
-# plt.plot(t_eval, df['Ca_B'], 'c.', label='Ca_B')
-# plt.plot(t_eval, df['IP3'], 'y.', label='IP3')
+plt.plot(t_eval, df['s10'], 'silver', linestyle='dashdot', label='s10 Koo et al.')
+#plt.plot(sol.t, sol.y[10, :], 'r', label='s11')
+#plt.plot(sol.t, sol.y[12, :], 'springgreen', label='s13')
 
 plt.grid()
-plt.ylim(-3e6, 4e6)
+plt.ylim(0, 5e6)
 plt.legend(loc='best')
 plt.xlabel('time (sec)')
 plt.ylabel('concentration nmol/L')
-plt.title('Shear Stress Induced Calcium influx and eNOS activation')
+plt.title('Shear stress induced calcium influx and eNOS activation')
+plt.show()
+
+# calculate the mean squared error and relative deviation to investigate implementation performance
+mse_Ca_c = (np.square(sol.y[2, :] - df['Ca_c'])).mean(axis=None)
+relative_deviation_Ca_c = np.mean(np.abs((sol.y[2, :] - df['Ca_c']) / df['Ca_c']))
+mse_Ca_B = (np.square(sol.y[3, :] - df['Ca_B'])).mean(axis=None)
+relative_deviation_Ca_B = np.mean(np.abs((sol.y[3, :] - df['Ca_B']) / df['Ca_B']))
+mse_IP3 = (np.square(sol.y[5, :] - df['IP3'])).mean(axis=None)
+relative_deviation_IP3 = np.mean(np.abs((sol.y[5, :] - df['IP3']) / df['IP3']))
+mse_s8 = (np.square(sol.y[7, :] - df['s8'])).mean(axis=None)
+relative_deviation_s8 = np.mean(np.abs((sol.y[7, :] - df['s8']) / df['s8']))
+mse_s9 = (np.square(sol.y[8, :] - df['s9'])).mean(axis=None)
+relative_deviation_s9 = np.mean(np.abs((sol.y[8, :] - df['s9']) / df['s9']))
+mse_s10 = (np.square(sol.y[9, :] - df['s10'])).mean(axis=None)
+relative_deviation_s10 = np.mean(np.abs((sol.y[9, :] - df['s10']) / df['s10']))
+
+print("MSE Ca_c:", mse_Ca_c)
+print("Relative deviation Ca_c:", relative_deviation_Ca_c)
+print("MSE Ca_B:", mse_Ca_B)
+print("Relative deviation Ca_B:", relative_deviation_Ca_B)
+print("MSE IP3:", mse_IP3)
+print("Relative deviation IP3:", relative_deviation_IP3)
+print("MSE s8:", mse_s8)
+print("Relative deviation s8:", relative_deviation_s8)
+print("MSE s9:", mse_s9)
+print("Relative deviation s9:", relative_deviation_s9)
+print("MSE s10:", mse_s10)
+print("Relative deviation s10:", relative_deviation_s10)
+
+plt.plot(sol.t, (np.square(sol.y[2, :] - df['Ca_c'])), 'g-', label='Ca_c')
+plt.plot(sol.t, (np.square(sol.y[3, :] - df['Ca_B'])), 'c-', label='Ca_B')
+plt.plot(sol.t, (np.square(sol.y[5, :] - df['IP3'])), 'y-', label='IP3')
+plt.plot(sol.t, (np.square(sol.y[7, :] - df['s8'])), 'mediumpurple', label='s8')
+plt.plot(sol.t, (np.square(sol.y[8, :] - df['s9'])), 'orange', label='s9')
+plt.plot(sol.t, (np.square(sol.y[9, :] - df['s10'])), 'teal', label='s10')
+plt.legend(loc='best')
+plt.xlabel('time (sec)')
+plt.ylabel('sqared error')
+plt.title('Squared error of the model implementation')
 plt.show()
